@@ -6,7 +6,6 @@ import App from './App';
 import router from './router';
 import './common/common.css'; // 引入公有的样式文件
 
-
 Vue.config.productionTip = false;
 
 /* eslint-disable no-new */

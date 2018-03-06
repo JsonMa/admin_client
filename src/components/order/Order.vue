@@ -15,15 +15,16 @@
             class="select-menu">
             <el-option
               label="订单号"
-              value="1"/>
+              value="id"/>
             <el-option
-              label="商品ID"
-              value="2"/>
+              label="联系电话"
+              value="phone"/>
           </el-select>
           <el-button
             slot="append"
             icon="el-icon-search"
-            class="search-button"/>
+            class="search-button"
+            @click="searchOrders()"/>
         </el-input>
       </div>
       <div class="table">
@@ -61,19 +62,29 @@
               slot-scope="scope"
               class="qr-option">
               <el-button
-                v-if="!scope.row.compressed_id"
+                v-if="scope.row.compressed_id"
                 size="small"
                 type="primary"
                 @click="packQr(scope.row)">
                 生成压缩包</el-button>
-              <el-button
+              <a
                 v-else
-                type="text"
-                @click="downLoadQr(scope.row.compressed_id)">
-                下载压缩包</el-button>
+                :href="`${host}/${scope.row.realPrice}`"
+                target="blank">
+                <el-button
+                  type="text">
+                  下载压缩包</el-button>
+              </a>
             </template>
           </el-table-column>
         </el-table>
+      </div>
+      <div class="pagenation">
+        <el-pagination
+          :total="total"
+          current-change="alert('11')"
+          background
+          layout="prev, pager, next"/>
       </div>
     </div>
   </lay-out>
@@ -113,11 +124,12 @@ export default {
   data() {
     return {
       msg: 'Welcome to Your Vue.js App',
+      host: 'http://localhost:7001',
       input: '',
       select: '',
       tableData: [
         {
-          index: '',
+          index: 1,
           _id: '',
           realPrice: 'ddd', // 订单金额
           create_at: '', // 创建时间
@@ -128,35 +140,62 @@ export default {
           compressed_id: false, // 是否已生成过压缩文件
         },
       ], // 表单数据
+      total: 100, // 总页数
     };
   },
   created() {
-    const host = 'http://localhost:7001';
-    const $this = this;
-    axios.get(`${host}/orders`).then((response) => {
-      $this.tableData = response.data.data.rows;
-    });
+    this.methods.fethcOrders(10, 0);
   },
   methods: {
     packQr(row) {
-      const host = 'http://localhost:7001';
+      const $this = this;
       axios({
         method: 'post',
-        url: `${host}/cards`,
+        url: `${$this.host}/cards`,
         data: {
           order_id: row.id // eslint-disable-line
         },
         headers: {
           'Content-Type': 'application/json',
         },
-      }).then((response) => {
-        console.log(response);
+      }).then((res) => {
+        console.log(res);
       });
     },
-    downLoadQr(id) {
-      const host = 'http://localhost:7001';
-      axios.get(`${host}/files/${id}`).then((response) => {
-        console.log(response);
+
+    fethcOrders(count, start) {
+      const $this = this;
+      axios({
+        method: 'post',
+        url: `${$this.host}/cards`,
+        data: {
+          count,
+          start,
+        },
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }).then((res) => {
+        $this.tableData = res.data.data.rows;
+        $this.total = Math.ceil(res.data.data.total / 10);
+      });
+    },
+
+    searchOrders() {
+      const { select, input } = this;
+      const $this = this;
+      const data = {};
+      data[select] = input;
+      axios({
+        method: 'post',
+        url: `${$this.host}/cards`,
+        data,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }).then((res) => {
+        $this.tableData = res.data.data.rows;
+        $this.total = Math.ceil(res.data.data.total / 10);
       });
     },
   },
@@ -185,6 +224,9 @@ export default {
     .qr-option {
       text-align: left;
     }
+  }
+  .pagenation {
+    margin-top: 20px
   }
 }
 </style>
