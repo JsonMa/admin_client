@@ -24,7 +24,7 @@
             slot="append"
             icon="el-icon-search"
             class="search-button"
-            @click="search(0)"/>
+            @click="search(1)"/>
         </el-input>
       </div>
       <div class="table">
@@ -49,8 +49,8 @@
             prop="phone"
             label="电话"/>
           <el-table-column
-            prop="address"
-            label="地址"/>
+            prop="commodity"
+            label="商品名称"/>
           <el-table-column
             prop="quata"
             label="二维码数量"/>
@@ -62,15 +62,16 @@
             <template
               slot-scope="scope"
               class="qr-option">
+              <span v-if="scope.row.auto">--</span>
               <el-button
-                v-if="!scope.row.compressed_id"
+                v-else-if="!scope.row.compressed_id"
                 size="small"
                 type="primary"
                 @click="packageQr(scope.$index, scope.row)">
                 生成压缩包</el-button>
               <a
                 v-else
-                :href="`/files/${scope.row.compressed_id}`"
+                :href="`/api/v1/files/${scope.row.compressed_id}`"
                 target="blank">
                 <el-button
                   type="text">
@@ -83,9 +84,9 @@
       <div class="pagenation">
         <el-pagination
           :total="total"
-          current-change="search(currentPage)"
           background
-          layout="prev, pager, next"/>
+          layout="prev, pager, next"
+          @current-change="search"/>
       </div>
     </div>
   </lay-out>
@@ -136,7 +137,7 @@ export default {
     };
   },
   created() {
-    this.fethcOrders({ count: 10, start: 0 });
+    this.fethcOrders({ status: 'PAYED' });
   },
   methods: {
     packageQr(index, row) {
@@ -161,7 +162,7 @@ export default {
       this.loading = true;
       api.default.orders(params).then((resp) => {
         $this.tableData = resp.data.rows;
-        $this.total = Math.ceil(resp.data.count / 10);
+        $this.total = resp.data.count;
         $this.loading = false;
       });
     },
@@ -181,13 +182,11 @@ export default {
           this.$message.error('订单号格式错误');
           return;
         }
-      } else {
-        this.$message.error('未选择查询条件');
-        return;
       }
       params[select] = input;
-      params.start = index * 10;
+      params.start = (index - 1) * 10;
       params.count = 10;
+      params.status = 'PAYED';
       this.fethcOrders(params);
     },
   },
@@ -218,7 +217,7 @@ export default {
     }
   }
   .pagenation {
-    margin-top: 20px
+    margin: 20px 0 30px 0
   }
 }
 </style>

@@ -2,7 +2,6 @@ import axios from 'axios';
 
 // axios 配置
 axios.defaults.timeout = 5000;
-axios.defaults.headers.post['Content-Type'] = 'application/json;charset=UTF-8';
 
 export function get(url, params) {
   return new Promise((resolve, reject) => {
@@ -30,9 +29,9 @@ export function post(url, params) {
 
 export default {
   orders(params) {
-    return get('/orders', params);
+    return get('/api/v1/orders', params);
   },
   compress(params) {
-    return post('/cards', params);
+    return post('/api/v1/cards', params);
   },
 };

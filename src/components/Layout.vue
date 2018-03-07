@@ -30,7 +30,7 @@ export default {
     padding-top: 40px;
     width: 100%;
     margin: 0 auto;
-    height: calc(~'100% - 250px');
+    min-height: calc(~'100% - 250px');
     background-color: #f5f5f6;
   }
 }
