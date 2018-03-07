@@ -3,7 +3,6 @@ import axios from 'axios';
 // axios 配置
 axios.defaults.timeout = 5000;
 axios.defaults.headers.post['Content-Type'] = 'application/json;charset=UTF-8';
-axios.defaults.baseURL = 'http://localhost:7001';
 
 export function get(url, params) {
   return new Promise((resolve, reject) => {

@@ -66,11 +66,11 @@
                 v-if="!scope.row.compressed_id"
                 size="small"
                 type="primary"
-                @click="packageQr(scope.row)">
+                @click="packageQr(scope.$index, scope.row)">
                 生成压缩包</el-button>
               <a
                 v-else
-                :href="`${host}/files/${scope.row.compressed_id}`"
+                :href="`/files/${scope.row.compressed_id}`"
                 target="blank">
                 <el-button
                   type="text">
@@ -129,7 +129,6 @@ export default {
   data() {
     return {
       loading: false,
-      host: 'http://localhost:7001',
       input: '',
       select: '',
       tableData: [], // 表单数据
@@ -140,17 +139,20 @@ export default {
     this.fethcOrders({ count: 10, start: 0 });
   },
   methods: {
-    packageQr(row) {
+    packageQr(index, row) {
       this.loading = true;
       const $this = this;
       const params = { order_id: row.id };
       api.default.compress(params).then((resp) => {
         $this.loading = false;
-        if (!resp.data.gzip_id) $this.$message.error('压缩包生成失败');
-        else $this.$message.error('压缩包生成失败');
-      }).catch(() => {
+        if (resp.code !== 200) $this.$message.error(resp.msg);
+        else {
+          $this.$message('压缩包成功生成');
+          $this.tableData[index].compressed_id = resp.data.gzip_id;
+        }
+      }).catch((error) => {
         $this.loading = false;
-        $this.$message.error('压缩包生成失败');
+        $this.$message.error(error);
       });
     },
 
