@@ -24,11 +24,12 @@
             slot="append"
             icon="el-icon-search"
             class="search-button"
-            @click="searchOrders()"/>
+            @click="search(0)"/>
         </el-input>
       </div>
       <div class="table">
         <el-table
+          v-loading="loading"
           :data="tableData"
           stripe
           style="width: 100%">
@@ -62,14 +63,14 @@
               slot-scope="scope"
               class="qr-option">
               <el-button
-                v-if="scope.row.compressed_id"
+                v-if="!scope.row.compressed_id"
                 size="small"
                 type="primary"
-                @click="packQr(scope.row)">
+                @click="packageQr(scope.row)">
                 生成压缩包</el-button>
               <a
                 v-else
-                :href="`${host}/${scope.row.realPrice}`"
+                :href="`${host}/files/${scope.row.compressed_id}`"
                 target="blank">
                 <el-button
                   type="text">
@@ -82,7 +83,7 @@
       <div class="pagenation">
         <el-pagination
           :total="total"
-          current-change="alert('11')"
+          current-change="search(currentPage)"
           background
           layout="prev, pager, next"/>
       </div>
@@ -102,9 +103,11 @@ import {
   Col,
   Option,
   Select,
+  Message,
+  Loading,
 } from 'element-ui';
-import axios from 'axios';
 import layOut from '../Layout';
+import * as api from '../../fetch/api';
 
 Vue.use(Input);
 Vue.use(Button);
@@ -115,6 +118,8 @@ Vue.use(Row);
 Vue.use(Col);
 Vue.use(Option);
 Vue.use(Select);
+Vue.use(Loading.directive);
+Vue.prototype.$message = Message;
 
 export default {
   name: 'HelloWorld',
@@ -123,80 +128,65 @@ export default {
   },
   data() {
     return {
-      msg: 'Welcome to Your Vue.js App',
+      loading: false,
       host: 'http://localhost:7001',
       input: '',
       select: '',
-      tableData: [
-        {
-          index: 1,
-          _id: '',
-          realPrice: 'ddd', // 订单金额
-          create_at: '', // 创建时间
-          name: '', // 用户名称
-          phone: '', // 电话
-          address: '', // 地址
-          quata: '', // 二维码数量
-          compressed_id: false, // 是否已生成过压缩文件
-        },
-      ], // 表单数据
-      total: 100, // 总页数
+      tableData: [], // 表单数据
+      total: 0, // 总页数
     };
   },
   created() {
-    this.methods.fethcOrders(10, 0);
+    this.fethcOrders({ count: 10, start: 0 });
   },
   methods: {
-    packQr(row) {
+    packageQr(row) {
+      this.loading = true;
       const $this = this;
-      axios({
-        method: 'post',
-        url: `${$this.host}/cards`,
-        data: {
-          order_id: row.id // eslint-disable-line
-        },
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }).then((res) => {
-        console.log(res);
+      const params = { order_id: row.id };
+      api.default.compress(params).then((resp) => {
+        $this.loading = false;
+        if (!resp.data.gzip_id) $this.$message.error('压缩包生成失败');
+        else $this.$message.error('压缩包生成失败');
+      }).catch(() => {
+        $this.loading = false;
+        $this.$message.error('压缩包生成失败');
       });
     },
 
-    fethcOrders(count, start) {
+    fethcOrders(params) {
       const $this = this;
-      axios({
-        method: 'post',
-        url: `${$this.host}/cards`,
-        data: {
-          count,
-          start,
-        },
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }).then((res) => {
-        $this.tableData = res.data.data.rows;
-        $this.total = Math.ceil(res.data.data.total / 10);
+      this.loading = true;
+      api.default.orders(params).then((resp) => {
+        $this.tableData = resp.data.rows;
+        $this.total = Math.ceil(resp.data.count / 10);
+        $this.loading = false;
       });
     },
 
-    searchOrders() {
+    search(index) {
+      const params = {};
       const { select, input } = this;
-      const $this = this;
-      const data = {};
-      data[select] = input;
-      axios({
-        method: 'post',
-        url: `${$this.host}/cards`,
-        data,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }).then((res) => {
-        $this.tableData = res.data.data.rows;
-        $this.total = Math.ceil(res.data.data.total / 10);
-      });
+      if (select === 'phone') {
+        const isValidated = /^([1][0-9]{10})|(0[1-9]{2,3}-?[0-9]{7,8})$/.test(input);
+        if (!isValidated) {
+          this.$message.error('联系电话格式错误');
+          return;
+        }
+      } else if (select === 'id') {
+        const isValidated = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-4][0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(input);
+        if (!isValidated) {
+          this.$message.error('订单号格式错误');
+          return;
+        }
+      } else {
+        this.$message.error('未选择查询条件');
+        return;
+      }
+      params[select] = input;
+      params.start = index * 10;
+      params.count = 10;
+      this.fethcOrders(params);
     },
   },
 };
